@@ -70,18 +70,15 @@ def _draw_bounds(img, bounds, color=(255, 255, 255), thickness=1):
     (x, y, w, h) = bounds
     cv2.rectangle(img, (x, y), (x + w, y + h), color, thickness)
 
-if __name__ == "__main__":
-    colors = {
-        "white": (255, 255, 255),
-        "red": (0, 0, 255),
-        "green": (0, 255, 0),
-        "blue": (255, 0, 0)
-    }
 
-    src = cv2.imread("card.jpg")
-    card_bounds = _get_card_bounds(src)
-    top_bounds = _get_top_bounds(src, card_bounds)
-    title = _crop(src, top_bounds)
+def _process_frame(img):
+    """
+    Draw the bounds on the image as rectangles.
+    Returns the bounds.
+    """
+    card_bounds = _get_card_bounds(img)
+    top_bounds = _get_top_bounds(img, card_bounds)
+    title = _crop(img, top_bounds)
 
     blank = np.zeros(title.shape, dtype="uint8")
     gray = get.gray(title)
@@ -91,12 +88,31 @@ if __name__ == "__main__":
 
     title_bounds = _offset_bounds(_get_title_bounds(blank), top_bounds)
 
-    _draw_bounds(src, top_bounds, colors["green"])
-    _draw_bounds(src, card_bounds, colors["blue"], thickness=2)
-    _draw_bounds(src, title_bounds, colors["red"], thickness=2)
+    _draw_bounds(img, top_bounds, colors["green"])
+    _draw_bounds(img, card_bounds, colors["blue"], thickness=2)
+    _draw_bounds(img, title_bounds, colors["red"], thickness=2)
 
-    cropped_title = get.gray(_crop(title, _get_title_bounds(blank)))
+    return {
+        "card": card_bounds,
+        "top": top_bounds,
+        "title": title_bounds
+    }
 
-    cv2.imshow("goggles", src)
+
+if __name__ == "__main__":
+    colors = {
+        "white": (255, 255, 255),
+        "red": (0, 0, 255),
+        "green": (0, 255, 0),
+        "blue": (255, 0, 0)
+    }
+
+    src = cv2.imread("card.jpg")
+    display_img = src.copy()
+    bounds = _process_frame(display_img)
+
+    cropped_title = get.gray(_crop(src, bounds["title"]))
+
+    cv2.imshow("goggles", display_img)
     cv2.imwrite("tmp/title.jpg", cropped_title)
     cv2.waitKey(0)
