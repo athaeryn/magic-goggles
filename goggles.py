@@ -13,7 +13,13 @@ def _crop(img, bounds):
     return img[y1:y2, x1:x2]
 
 
-def crop_to_card(img):
+def _offset_bounds(bounds, parent_bounds):
+    (x, y, w, h) = bounds
+    (px, py, pw, ph) = parent_bounds
+    return (x + px, y + py, w, h)
+
+
+def _get_card_bounds(img):
     gray = get.gray(img)
     blurred = cv2.medianBlur(gray, 9)
     thresh = cv2.adaptiveThreshold(
@@ -24,18 +30,17 @@ def crop_to_card(img):
         15,
         4
     )
-    bounds = get.bounds(get.contours(thresh))
-    return _crop(img, bounds)
+    return get.bounds(get.contours(thresh))
 
 
-def crop_to_title(img):
+def _get_top_bounds(img, bounds):
+    img = _crop(img, bounds)
     height = img.shape[0]
     width = img.shape[1]
-    bounds = (0, 0, width, (height / 9))
-    return _crop(img, bounds)
+    return _offset_bounds((0, 0, width, (height / 9)), bounds)
 
 
-def highlight_bounds(img):
+def _get_title_bounds(img):
     w = img.shape[1]
     h = img.shape[0]
 
@@ -61,10 +66,22 @@ def highlight_bounds(img):
     return (left, top, right - left, bottom - top)
 
 
+def _draw_bounds(img, bounds, color=(255, 255, 255), thickness=1):
+    (x, y, w, h) = bounds
+    cv2.rectangle(img, (x, y), (x + w, y + h), color, thickness)
+
 if __name__ == "__main__":
+    colors = {
+        "white": (255, 255, 255),
+        "red": (0, 0, 255),
+        "green": (0, 255, 0),
+        "blue": (255, 0, 0)
+    }
+
     src = cv2.imread("card.jpg")
-    card = crop_to_card(src)
-    title = crop_to_title(card)
+    card_bounds = _get_card_bounds(src)
+    top_bounds = _get_top_bounds(src, card_bounds)
+    title = _crop(src, top_bounds)
 
     blank = np.zeros(title.shape, dtype="uint8")
     gray = get.gray(title)
@@ -72,11 +89,14 @@ if __name__ == "__main__":
     draw.corners(blurred, blank, color=(255, 255, 255))
     blank = cv2.dilate(blank, None, iterations=2)
 
-    (x1, y1, w, h) = highlight_bounds(blank)
-    cv2.rectangle(title, (x1, y1), (x1 + w, y1 + h), (0, 255, 0))
+    title_bounds = _offset_bounds(_get_title_bounds(blank), top_bounds)
 
-    cropped_title = get.gray(_crop(title, highlight_bounds(blank)))
+    _draw_bounds(src, top_bounds, colors["green"])
+    _draw_bounds(src, card_bounds, colors["blue"], thickness=2)
+    _draw_bounds(src, title_bounds, colors["red"], thickness=2)
 
-    cv2.imshow("title", title)
+    cropped_title = get.gray(_crop(title, _get_title_bounds(blank)))
+
+    cv2.imshow("goggles", src)
     cv2.imwrite("tmp/title.jpg", cropped_title)
     cv2.waitKey(0)
