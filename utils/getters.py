@@ -18,6 +18,5 @@ def bounds(contours):
 
 def corners(img):
     gray = np.float32(img)
-    dist = cv2.cornerHarris(gray, 2, 3, 0.04)
-    dist = cv2.dilate(dist, None)
+    dist = cv2.cornerHarris(gray, 2, 3, 0.06)
     return dist > 0.1 * dist.max()

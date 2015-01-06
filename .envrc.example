@@ -1,0 +1,1 @@
+export CARD_DB_PATH=/path/to/cards.db
