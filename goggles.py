@@ -37,7 +37,14 @@ def _get_top_bounds(img, bounds):
     img = _crop(img, bounds)
     height = img.shape[0]
     width = img.shape[1]
-    return _offset_bounds((0, 0, width, (height / 9)), bounds)
+    x_pad = int(width / 12.5)
+    y_pad = height / 16
+    return _offset_bounds((
+        x_pad,
+        y_pad,
+        width - 5 * x_pad,
+        int(height / 9.5) - y_pad
+    ), bounds)
 
 
 def _get_title_bounds(img):
@@ -90,7 +97,7 @@ def _process_frame(img):
 
     _draw_bounds(img, top_bounds, colors["green"])
     _draw_bounds(img, card_bounds, colors["blue"], thickness=2)
-    _draw_bounds(img, title_bounds, colors["red"], thickness=2)
+    _draw_bounds(img, title_bounds, colors["red"], thickness=1)
 
     return {
         "card": card_bounds,
@@ -99,20 +106,59 @@ def _process_frame(img):
     }
 
 
+colors = {
+    "white": (255, 255, 255),
+    "red": (0, 0, 255),
+    "green": (0, 255, 0),
+    "blue": (255, 0, 0)
+}
+
+
+def _process_title(frame, bounds):
+    return cv2.adaptiveThreshold(
+        cv2.equalizeHist(get.gray(_crop(frame, bounds))),
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        15,
+        4
+    )
+
+
 if __name__ == "__main__":
-    colors = {
-        "white": (255, 255, 255),
-        "red": (0, 0, 255),
-        "green": (0, 255, 0),
-        "blue": (255, 0, 0)
-    }
+    cv2.namedWindow("goggles")
 
-    src = cv2.imread("card.jpg")
-    display_img = src.copy()
-    bounds = _process_frame(display_img)
+    vc = cv2.VideoCapture(0)
+    if vc.isOpened():  # Try to get the first frame.
+        rval, frame = vc.read()
+    else:
+        rval = False
 
-    cropped_title = get.gray(_crop(src, bounds["title"]))
+    while rval:
+        rval, frame = vc.read()
+        key = cv2.waitKey(33)
+        frame = cv2.pyrDown(frame)
+        display_img = frame.copy()
+        cv2.imshow("goggles", display_img)
+        try:
+            bounds = _process_frame(display_img)
 
-    cv2.imshow("goggles", display_img)
-    cv2.imwrite("tmp/title.jpg", cropped_title)
-    cv2.waitKey(0)
+            title = _crop(frame, bounds["title"])
+            (h, w, _) = title.shape
+            display_img[0:h, 0:w] = title
+
+            cv2.imshow("goggles", display_img)
+
+            title = _process_title(frame, bounds["title"])
+        except:
+            pass  # Just ignore exceptions.
+        if key == 27:  # Exit on escape.
+            break
+        elif key == 32:
+            try:
+                title = _process_title(frame, bounds["title"])
+                cv2.imwrite("tmp/title.jpg", title)
+            except:
+                pass
+
+    cv2.destroyWindow("goggles")
