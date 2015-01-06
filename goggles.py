@@ -5,8 +5,9 @@ import numpy as np
 from utils import getters as get
 from utils import drawers as draw
 
+
 def _crop(img, bounds):
-    x1,y1,w,h = bounds
+    x1, y1, w, h = bounds
     x2 = x1 + w
     y2 = y1 + h
     return img[y1:y2, x1:x2]
@@ -20,7 +21,8 @@ def crop_to_card(img):
         255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv2.THRESH_BINARY_INV,
-        15, 4
+        15,
+        4
     )
     bounds = get.bounds(get.contours(thresh))
     return _crop(img, bounds)
@@ -28,7 +30,7 @@ def crop_to_card(img):
 
 def crop_to_title(img):
     height = img.shape[0]
-    width  = img.shape[1]
+    width = img.shape[1]
     bounds = (0, 0, width, (height / 9))
     return _crop(img, bounds)
 
@@ -59,7 +61,6 @@ def highlight_bounds(img):
     return (left, top, right - left, bottom - top)
 
 
-
 if __name__ == "__main__":
     src = cv2.imread("card.jpg")
     card = crop_to_card(src)
@@ -68,11 +69,11 @@ if __name__ == "__main__":
     blank = np.zeros(title.shape, dtype="uint8")
     gray = get.gray(title)
     blurred = cv2.medianBlur(gray, 3)
-    draw.corners(blurred, blank, color=(255,255,255))
+    draw.corners(blurred, blank, color=(255, 255, 255))
     blank = cv2.dilate(blank, None, iterations=2)
 
     (x1, y1, w, h) = highlight_bounds(blank)
-    cv2.rectangle(title, (x1, y1), (x1 + w, y1 + h), (0,255,0))
+    cv2.rectangle(title, (x1, y1), (x1 + w, y1 + h), (0, 255, 0))
 
     cropped_title = get.gray(_crop(title, highlight_bounds(blank)))
 
