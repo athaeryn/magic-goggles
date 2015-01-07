@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
+import os
+import os.path
+import sys
+import argparse
+
 import cv2
 import numpy as np
-import os.path
-import argparse
 import Image
 from pytesseract import image_to_string
+
 from utils import getters as get
 from utils import drawers as draw
+from title_guesser import TitleGuesser
 
 
 def _crop(img, bounds):
@@ -136,7 +143,6 @@ def _begin_webcam_loop():
         key = cv2.waitKey(33)
         frame = cv2.pyrDown(frame)
         display_img = frame.copy()
-        cv2.imshow("goggles", display_img)
         try:
             bounds = _process_frame(display_img)
 
@@ -146,13 +152,16 @@ def _begin_webcam_loop():
 
             cv2.imshow("goggles", display_img)
         except:
-            pass  # Just ignore exceptions.
+            cv2.imshow("goggles", display_img)
         if key == 27:  # Exit on escape.
             break
         elif key == 32:
+            print("Trying to read title...", file=sys.stderr)
             try:
                 title = _process_title(frame, bounds["title"])
-                print ocr(title)
+                ocr_guess = ocr(title)
+                print("Tesseract says...", ocr_guess, file=sys.stderr)
+                print(title_guesser.guess(ocr_guess))
             except:
                 pass
 
@@ -165,7 +174,9 @@ def _read_title_from_image(path):
     try:
         bounds = _process_frame(src.copy())
         title = _process_title(src, bounds["title"])
-        print ocr(title)
+        ocr_guess = ocr(title)
+        print("Tesseract says...", ocr_guess, file=sys.stderr)
+        print(title_guesser.guess(ocr_guess))
     except:
         pass
 
@@ -176,7 +187,7 @@ def ocr(cvimage):
     Returns the title as a string.
     """
     cvimage = cv2.cvtColor(cvimage, cv2.COLOR_BGR2RGB)
-    return image_to_string(Image.fromarray(cvimage))
+    return image_to_string(Image.fromarray(cvimage)).replace("[", "")
 
 
 # I'm planning to remove the --image arg, since this script should always be
@@ -185,8 +196,9 @@ def ocr(cvimage):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--image", help="The image to read.")
-    parser.add_argument("-o", "--out", help="The file to write card names to.")
     args = parser.parse_args()
+
+    title_guesser = TitleGuesser(db_path=os.environ["CARD_DB_PATH"])
 
     if args.image is None:
         _begin_webcam_loop()
@@ -194,4 +206,5 @@ if __name__ == "__main__":
         if os.path.isfile(args.image):
             _read_title_from_image(args.image)
         else:
-            print "Couldn't read file"
+            print("Couldn't read file", file=sys.stderr)
+            sys.exit(1)
