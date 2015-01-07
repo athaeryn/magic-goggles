@@ -119,17 +119,10 @@ colors = {
 
 
 def _process_title(frame, bounds):
-    return cv2.adaptiveThreshold(
-        cv2.equalizeHist(get.gray(_crop(frame, bounds))),
-        255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY,
-        15,
-        4
-    )
+    return _crop(frame, bounds)
 
 
-def begin_webcam_loop():
+def _begin_webcam_loop():
     cv2.namedWindow("goggles")
 
     vc = cv2.VideoCapture(0)
@@ -152,8 +145,6 @@ def begin_webcam_loop():
             display_img[0:h, 0:w] = title
 
             cv2.imshow("goggles", display_img)
-
-            title = _process_title(frame, bounds["title"])
         except:
             pass  # Just ignore exceptions.
         if key == 27:  # Exit on escape.
@@ -161,7 +152,7 @@ def begin_webcam_loop():
         elif key == 32:
             try:
                 title = _process_title(frame, bounds["title"])
-                cv2.imwrite("tmp/title.jpg", title)
+                print ocr(title)
             except:
                 pass
 
@@ -169,23 +160,23 @@ def begin_webcam_loop():
 
 
 # This function is mostly for testing.
-def read_title_from_image(path):
+def _read_title_from_image(path):
     src = cv2.imread(path)
     try:
         bounds = _process_frame(src.copy())
         title = _process_title(src, bounds["title"])
-        cv2.imwrite("tmp/title.jpg", title)
-        print ocr()
+        print ocr(title)
     except:
         pass
 
 
-def ocr():
+def ocr(cvimage):
     """
     Run Tesseract on the title image in ./tmp.
     Returns the title as a string.
     """
-    return image_to_string(Image.open("./tmp/title.jpg"))
+    cvimage = cv2.cvtColor(cvimage, cv2.COLOR_BGR2RGB)
+    return image_to_string(Image.fromarray(cvimage))
 
 
 # I'm planning to remove the --image arg, since this script should always be
@@ -198,9 +189,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.image is None:
-        begin_webcam_loop()
+        _begin_webcam_loop()
     else:
         if os.path.isfile(args.image):
-            read_title_from_image(args.image)
+            _read_title_from_image(args.image)
         else:
             print "Couldn't read file"
