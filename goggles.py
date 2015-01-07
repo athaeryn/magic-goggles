@@ -2,6 +2,8 @@
 
 import cv2
 import numpy as np
+import os.path
+import argparse
 from utils import getters as get
 from utils import drawers as draw
 
@@ -125,7 +127,7 @@ def _process_title(frame, bounds):
     )
 
 
-if __name__ == "__main__":
+def begin_webcam_loop():
     cv2.namedWindow("goggles")
 
     vc = cv2.VideoCapture(0)
@@ -162,3 +164,28 @@ if __name__ == "__main__":
                 pass
 
     cv2.destroyWindow("goggles")
+
+
+def read_title_from_image(path):
+    src = cv2.imread(path)
+    try:
+        bounds = _process_frame(src.copy())
+        title = _process_title(src, bounds["title"])
+        cv2.imwrite("tmp/title.jpg", title)
+    except:
+        pass
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--image", help="The image to read.")
+    parser.add_argument("-o", "--out", help="The file to write card names to.")
+    args = parser.parse_args()
+
+    if args.image is None:
+        begin_webcam_loop()
+    else:
+        if os.path.isfile(args.image):
+            read_title_from_image(args.image)
+        else:
+            print "Couldn't read file"
