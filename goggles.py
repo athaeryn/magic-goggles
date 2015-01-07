@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import os.path
 import argparse
+import Image
+from pytesseract import image_to_string
 from utils import getters as get
 from utils import drawers as draw
 
@@ -166,16 +168,29 @@ def begin_webcam_loop():
     cv2.destroyWindow("goggles")
 
 
+# This function is mostly for testing.
 def read_title_from_image(path):
     src = cv2.imread(path)
     try:
         bounds = _process_frame(src.copy())
         title = _process_title(src, bounds["title"])
         cv2.imwrite("tmp/title.jpg", title)
+        print ocr()
     except:
         pass
 
 
+def ocr():
+    """
+    Run Tesseract on the title image in ./tmp.
+    Returns the title as a string.
+    """
+    return image_to_string(Image.open("./tmp/title.jpg"))
+
+
+# I'm planning to remove the --image arg, since this script should always be
+# used with a webcam. The image option is still useful for testing if I don't
+# have access to a webcam, so I'll make it a separate script.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--image", help="The image to read.")
