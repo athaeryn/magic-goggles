@@ -1,6 +1,9 @@
+from math import atan2, degrees
+
 import cv2
 import numpy as np
-from math import atan2, degrees
+import Image
+from pytesseract import image_to_string
 
 
 def _compute_angle(line):
@@ -90,6 +93,14 @@ def _gray(img):
 
 def _edges(img):
     return cv2.Canny(img, 10, 200, apertureSize=3)
+
+
+def ocr(cvimage):
+    """
+    Run Tesseract on the title image in ./tmp.
+    Returns the title as a string.
+    """
+    return image_to_string(Image.fromarray(cvimage)).replace("[", "")
 
 
 def extract_title(img):
