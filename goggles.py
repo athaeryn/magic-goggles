@@ -6,6 +6,7 @@ import os
 import os.path
 import sys
 import argparse
+from uuid import uuid1 as uuid
 
 import cv2
 import numpy as np
@@ -164,13 +165,10 @@ def _draw_bounds(img, bounds, color=(255, 255, 255), thickness=1):
 
 
 def _process_frame(img):
-    # small = cv2.pyrDown(img)
-    small = img
-
-    card, edges = get_cropped_card(small)
+    card, edges = get_cropped_card(img)
 
     for x1, y1, x2, y2 in edges:
-        cv2.line(small, (x1, y1), (x2, y2), (0, 255, 0), 4)
+        cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 4)
 
     top = card[0:card.shape[1] / 5, 0:card.shape[0]]
 
@@ -180,15 +178,14 @@ def _process_frame(img):
     contours = get_contours(blurred)
     outer, _, inner = sorted(contours, key=cv2.contourArea, reverse=True)[:3]
 
-    cv2.drawContours(top, [inner], -1, (255, 255, 255), 5)
-
-    box = cv2.boundingRect(inner)
+    box = cv2.boundingRect(outer)
     title = _crop(top, box)
 
     gray = get.gray(title)
-    _, thresh = cv2.threshold(gray, 140, 256, cv2.THRESH_BINARY)
+    _, thresh = cv2.threshold(gray, 128, 256, cv2.THRESH_BINARY)
+    title = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
 
-    return thresh
+    return title
 
 
 colors = {
@@ -201,6 +198,8 @@ colors = {
 
 def _begin_webcam_loop():
     cv2.namedWindow("goggles")
+
+    guess = ""
 
     vc = cv2.VideoCapture(0)
     if vc.isOpened():  # Try to get the first frame.
@@ -219,33 +218,46 @@ def _begin_webcam_loop():
             (h, w, _) = title.shape
             display_img[0:h, 0:w] = title
 
+            cv2.putText(
+                display_img,
+                guess,
+                (50, 200),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 0)
+            )
+
             cv2.imshow("goggles", display_img)
         except:
             cv2.imshow("goggles", display_img)
         if key == 27:  # Exit on escape.
             break
-        elif key == 32:  # Guess on space.
+        elif key == 112:  # Save frame on p.
+            cv2.imwrite(str(uuid()) + ".jpg", frame)
+        elif key == 32:  # Print guess on space.
+            print(guess)
+            guess = ""
+        elif key == 103:  # Guess on g.
             print("Trying to read title...", file=sys.stderr)
             try:
                 ocr_guess = ocr(title)
                 print("Tesseract says...", ocr_guess, file=sys.stderr)
-                print(title_guesser.guess(ocr_guess))
+                guess = title_guesser.guess(ocr_guess)
+                print(guess, file=sys.stderr)
+                # print(title_guesser.guess(ocr_guess))
             except:
                 pass
 
-    cv2.destroyWindow("goggles")
+    cv2.destroyAllWindows()
 
 
 # This function is mostly for testing.
 def _read_title_from_image(path):
     src = cv2.imread(path)
-    try:
-        title = _process_frame(src.copy())
-        ocr_guess = ocr(title)
-        print("Tesseract says...", ocr_guess, file=sys.stderr)
-        print(title_guesser.guess(ocr_guess))
-    except:
-        pass
+    title = _process_frame(src.copy())
+    ocr_guess = ocr(title)
+    print("Tesseract says...", ocr_guess, file=sys.stderr)
+    print(title_guesser.guess(ocr_guess))
 
 
 def ocr(cvimage):
