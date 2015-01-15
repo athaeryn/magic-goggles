@@ -13,7 +13,7 @@ import Image
 from pytesseract import image_to_string
 
 from utils import getters as get
-from utils import drawers as draw
+from math import atan2, degrees
 from title_guesser import TitleGuesser
 
 
@@ -42,6 +42,80 @@ def _get_card_bounds(img):
         4
     )
     return get.bounds(get.contours(thresh))
+
+
+def get_contours(gray):
+    blurred = cv2.medianBlur(gray, 3)
+    edges = get.edges(blurred)
+    contours, hierarchy = cv2.findContours(
+        edges,
+        cv2.RETR_TREE,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+    return contours
+
+
+def intersection(l1, l2):
+    x1, y1, x2, y2 = l1
+    x3, y3, x4, y4 = l2
+    # http://en.wikipedia.org/wiki/Line-line_intersection#Given_two_points_on_each_line
+    return (
+        ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) /
+        ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)),
+        ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) /
+        ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4))
+    )
+
+
+def compute_angle(line):
+    (x1, y1, x2, y2) = line
+    (dx, dy) = (x2 - x1, y2 - y1)
+    rads = atan2(-dy, dx)
+    return abs(degrees(rads))
+
+
+def compute_center(line):
+    (x1, y1, x2, y2) = line
+    return ((x1 + x2) / 2, (y1 + y2) / 2)
+
+
+def get_cropped_card(img):
+    gray = get.gray(img)
+    blurred = cv2.medianBlur(gray, 17)
+
+    edges = cv2.dilate(cv2.Canny(blurred, 100, 100, 3), None)
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, 200, 300, 100)[0]
+
+    vert = filter(lambda l: abs(compute_angle(l) - 90) < 45, lines)
+    hori = filter(lambda l: abs(compute_angle(l) - 0) < 45, lines)
+
+    edges = [
+        sorted(hori, key=lambda l: compute_center(l)[1])[0],   # top
+        sorted(vert, key=lambda l: compute_center(l)[0])[0],   # left
+        sorted(hori, key=lambda l: compute_center(l)[1])[-1],  # bottom
+        sorted(vert, key=lambda l: compute_center(l)[0])[-1]   # right
+    ]
+
+    rect = np.zeros((4, 2), dtype="float32")
+    rect[0] = intersection(edges[0], edges[1])  # top left
+    rect[1] = intersection(edges[0], edges[3])  # top right
+    rect[2] = intersection(edges[2], edges[3])  # bottom right
+    rect[3] = intersection(edges[2], edges[1])  # bottom left
+
+    width = 480
+    height = 680
+
+    dst = np.array([
+        [0, 0],
+        [width - 1, 0],
+        [width - 1, height - 1],
+        [0, height - 1]
+    ], dtype="float32")
+
+    matrix = cv2.getPerspectiveTransform(rect, dst)
+    warped = cv2.warpPerspective(img, matrix, (width, height))
+
+    return warped, edges
 
 
 def _get_top_bounds(img, bounds):
@@ -90,31 +164,31 @@ def _draw_bounds(img, bounds, color=(255, 255, 255), thickness=1):
 
 
 def _process_frame(img):
-    """
-    Draw the bounds on the image as rectangles.
-    Returns the bounds.
-    """
-    card_bounds = _get_card_bounds(img)
-    top_bounds = _get_top_bounds(img, card_bounds)
-    title = _crop(img, top_bounds)
+    # small = cv2.pyrDown(img)
+    small = img
 
-    blank = np.zeros(title.shape, dtype="uint8")
-    gray = get.gray(title)
+    card, edges = get_cropped_card(small)
+
+    for x1, y1, x2, y2 in edges:
+        cv2.line(small, (x1, y1), (x2, y2), (0, 255, 0), 4)
+
+    top = card[0:card.shape[1] / 5, 0:card.shape[0]]
+
+    gray = get.gray(top)
     blurred = cv2.medianBlur(gray, 3)
-    draw.corners(blurred, blank, color=(255, 255, 255))
-    blank = cv2.dilate(blank, None, iterations=2)
 
-    title_bounds = _offset_bounds(_get_title_bounds(blank), top_bounds)
+    contours = get_contours(blurred)
+    outer, _, inner = sorted(contours, key=cv2.contourArea, reverse=True)[:3]
 
-    _draw_bounds(img, top_bounds, colors["green"])
-    _draw_bounds(img, card_bounds, colors["blue"], thickness=2)
-    _draw_bounds(img, title_bounds, colors["red"], thickness=1)
+    cv2.drawContours(top, [inner], -1, (255, 255, 255), 5)
 
-    return {
-        "card": card_bounds,
-        "top": top_bounds,
-        "title": title_bounds
-    }
+    box = cv2.boundingRect(inner)
+    title = _crop(top, box)
+
+    gray = get.gray(title)
+    _, thresh = cv2.threshold(gray, 140, 256, cv2.THRESH_BINARY)
+
+    return thresh
 
 
 colors = {
@@ -123,10 +197,6 @@ colors = {
     "green": (0, 255, 0),
     "blue": (255, 0, 0)
 }
-
-
-def _process_title(frame, bounds):
-    return _crop(frame, bounds)
 
 
 def _begin_webcam_loop():
@@ -144,9 +214,8 @@ def _begin_webcam_loop():
         frame = cv2.pyrDown(frame)
         display_img = frame.copy()
         try:
-            bounds = _process_frame(display_img)
+            title = _process_frame(display_img)
 
-            title = _crop(frame, bounds["title"])
             (h, w, _) = title.shape
             display_img[0:h, 0:w] = title
 
@@ -155,10 +224,9 @@ def _begin_webcam_loop():
             cv2.imshow("goggles", display_img)
         if key == 27:  # Exit on escape.
             break
-        elif key == 32:
+        elif key == 32:  # Guess on space.
             print("Trying to read title...", file=sys.stderr)
             try:
-                title = _process_title(frame, bounds["title"])
                 ocr_guess = ocr(title)
                 print("Tesseract says...", ocr_guess, file=sys.stderr)
                 print(title_guesser.guess(ocr_guess))
@@ -172,8 +240,7 @@ def _begin_webcam_loop():
 def _read_title_from_image(path):
     src = cv2.imread(path)
     try:
-        bounds = _process_frame(src.copy())
-        title = _process_title(src, bounds["title"])
+        title = _process_frame(src.copy())
         ocr_guess = ocr(title)
         print("Tesseract says...", ocr_guess, file=sys.stderr)
         print(title_guesser.guess(ocr_guess))
@@ -186,7 +253,6 @@ def ocr(cvimage):
     Run Tesseract on the title image in ./tmp.
     Returns the title as a string.
     """
-    cvimage = cv2.cvtColor(cvimage, cv2.COLOR_BGR2RGB)
     return image_to_string(Image.fromarray(cvimage)).replace("[", "")
 
 
