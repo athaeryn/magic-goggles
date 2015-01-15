@@ -264,7 +264,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--image", help="The image to read.")
     args = parser.parse_args()
 
-    title_guesser = TitleGuesser(db_path=os.environ["CARD_DB_PATH"])
+    title_guesser = TitleGuesser("KTK")
 
     if args.image is None:
         _begin_webcam_loop()
