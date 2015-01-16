@@ -115,7 +115,15 @@ def extract_title(img):
     blurred = cv2.medianBlur(gray, 3)
 
     contours = _get_contours(blurred)
-    outer, _, inner = sorted(contours, key=cv2.contourArea, reverse=True)[:3]
+
+    try:
+        outer, _, inner = sorted(
+            contours,
+            key=cv2.contourArea,
+            reverse=True
+        )[:3]
+    except:
+        return card
 
     box = cv2.boundingRect(outer)
     title = _crop(top, box)

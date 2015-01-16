@@ -18,7 +18,7 @@ def _read_title_from_image(path):
 
 
 if __name__ == "__main__":
-    title_guesser = TitleGuesser(db_path=os.environ["CARD_DB_PATH"])
+    title_guesser = TitleGuesser("KTK")
 
     files = glob("./test_imgs/*.jpg")
     files = map(lambda x: (x, os.path.splitext(os.path.basename(x))[0]), files)

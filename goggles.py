@@ -2,8 +2,6 @@
 
 from __future__ import print_function
 
-import os
-import os.path
 import sys
 from uuid import uuid1 as uuid
 
@@ -77,5 +75,5 @@ def _begin_webcam_loop():
 
 
 if __name__ == "__main__":
-    title_guesser = TitleGuesser(db_path=os.environ["CARD_DB_PATH"])
+    title_guesser = TitleGuesser("KTK")
     _begin_webcam_loop()
