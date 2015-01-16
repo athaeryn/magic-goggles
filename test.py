@@ -1,8 +1,8 @@
 from __future__ import print_function
 
-import sys
 import os
-import argparse
+import sys
+from glob import glob
 
 import cv2
 
@@ -14,19 +14,21 @@ def _read_title_from_image(path):
     src = cv2.imread(path)
     title = extract_title(src.copy())
     ocr_guess = ocr(title)
-    print("Tesseract says...", ocr_guess, file=sys.stderr)
-    print(title_guesser.guess(ocr_guess))
+    return title_guesser.guess(ocr_guess) if len(ocr_guess) > 0 else ""
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--image", help="Image to read.", required=True)
-    args = parser.parse_args()
-
     title_guesser = TitleGuesser(db_path=os.environ["CARD_DB_PATH"])
 
-    if os.path.isfile(args.image):
-        _read_title_from_image(args.image)
-    else:
-        print("Couldn't read file", file=sys.stderr)
-        sys.exit(1)
+    files = glob("./test_imgs/*.jpg")
+    files = map(lambda x: (x, os.path.splitext(os.path.basename(x))[0]), files)
+
+    for path, name in files:
+        try:
+            guess = _read_title_from_image(path)
+            if guess != name:
+                print('Expected "{}" but got "{}"'.format(name, guess))
+            else:
+                print('Correctly guessed "{}"'.format(name))
+        except:
+            print('Error testing "{}": {}'.format(path, sys.exc_info()[0]))

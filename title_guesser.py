@@ -1,5 +1,4 @@
 from __future__ import print_function
-import sys
 
 from fuzzywuzzy import process
 
@@ -12,5 +11,4 @@ class TitleGuesser:
 
     def guess(self, crap_title):
         titles = process.extract(crap_title, self._card_names)
-        print(titles, file=sys.stderr)
         return titles[0][0]
