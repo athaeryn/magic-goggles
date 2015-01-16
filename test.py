@@ -20,7 +20,7 @@ def _read_title_from_image(path):
 if __name__ == "__main__":
     title_guesser = TitleGuesser("KTK")
 
-    files = glob("./test_imgs/*.jpg")
+    files = glob("./sample_imgs/*.jpg")
     files = map(lambda x: (x, os.path.splitext(os.path.basename(x))[0]), files)
 
     for path, name in files:
