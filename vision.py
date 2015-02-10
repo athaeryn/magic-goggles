@@ -71,7 +71,7 @@ def _get_cropped_card(img):
     matrix = cv2.getPerspectiveTransform(rect, dst)
     warped = cv2.warpPerspective(img, matrix, (width, height))
 
-    return warped, edges
+    return warped
 
 
 def _get_contours(gray):

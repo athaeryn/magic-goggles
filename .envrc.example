@@ -1,2 +1,4 @@
 export CARD_DB_PATH=/path/to/cards.db
 export SETS_TXT_PATH=/path/to/sets
+export CARD_IMAGE_PATH=/path/to/images
+export CARD_HASHES_PATH=/path/to/hashes.txt
