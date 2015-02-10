@@ -6,7 +6,8 @@ from glob import glob
 
 import cv2
 
-from vision import extract_title, ocr
+from vision import extract_title
+from ocr import ocr
 from title_guesser import TitleGuesser
 
 
