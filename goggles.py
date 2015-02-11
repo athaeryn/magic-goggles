@@ -7,8 +7,7 @@ from uuid import uuid1 as uuid
 
 import cv2
 
-from vision import extract_title
-from ocr import ocr
+from vision import _get_cropped_card
 from title_guesser import TitleGuesser
 
 
@@ -36,23 +35,45 @@ def _begin_webcam_loop():
         key = cv2.waitKey(33)
         frame = cv2.pyrDown(frame)
         display_img = frame.copy()
-        try:
-            title = extract_title(display_img)
 
-            (h, w, _) = title.shape
-            display_img[0:h, 0:w] = title
+        if len(guess) > 0:
+            guess_display_text = "will write: " + guess
+        else:
+            guess_display_text = ""
+
+        try:
+            card = _get_cropped_card(display_img)
+
+            frame_guess = guesser.guess(card)
 
             cv2.putText(
                 display_img,
-                guess,
-                (50, 200),
-                cv2.FONT_HERSHEY_SIMPLEX,
+                frame_guess,
+                (50, 100),
+                cv2.FONT_HERSHEY_PLAIN,
                 1,
-                (255, 255, 0)
+                colors["red"]
+            )
+            cv2.putText(
+                display_img,
+                guess_display_text,
+                (50, 200),
+                cv2.FONT_HERSHEY_PLAIN,
+                1,
+                colors["blue"]
             )
 
             cv2.imshow("goggles", display_img)
+
         except:
+            cv2.putText(
+                display_img,
+                guess_display_text,
+                (50, 200),
+                cv2.FONT_HERSHEY_PLAIN,
+                1,
+                colors["blue"]
+            )
             cv2.imshow("goggles", display_img)
         if key == 27:  # Exit on escape.
             break
@@ -64,11 +85,8 @@ def _begin_webcam_loop():
         elif key == 103:  # Guess on g.
             print("Trying to read title...", file=sys.stderr)
             try:
-                ocr_guess = ocr(title)
-                print("Tesseract says...", ocr_guess, file=sys.stderr)
-                guess = title_guesser.guess(ocr_guess)
+                guess = guesser.guess(card)
                 print(guess, file=sys.stderr)
-                # print(title_guesser.guess(ocr_guess))
             except:
                 pass
 
@@ -76,5 +94,7 @@ def _begin_webcam_loop():
 
 
 if __name__ == "__main__":
-    title_guesser = TitleGuesser("KTK")
+    guesser = TitleGuesser()
+    guesser.load_set("FRF")
+
     _begin_webcam_loop()
