@@ -82,8 +82,10 @@ def _begin_webcam_loop():
         elif key == 32:  # Print guess on space.
             print(guess)
             guess = ""
+        elif key == 99:  # Clear guess on c.
+            guess = ""
         elif key == 103:  # Guess on g.
-            print("Trying to read title...", file=sys.stderr)
+            print("Locking in guess...", file=sys.stderr)
             try:
                 guess = guesser.guess(card)
                 print(guess, file=sys.stderr)
@@ -94,7 +96,21 @@ def _begin_webcam_loop():
 
 
 if __name__ == "__main__":
+    sets = [
+        "DGM",
+        "BNG",
+        "JOU",
+        "THS",
+        "RTR",
+        "GTC",
+        "KTK",
+        "FRF",
+        "M14",
+        "M15"
+    ]
     guesser = TitleGuesser()
-    guesser.load_set("FRF")
+
+    for set in sets:
+        guesser.load_set(set)
 
     _begin_webcam_loop()

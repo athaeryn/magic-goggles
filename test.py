@@ -12,6 +12,7 @@ from title_guesser import TitleGuesser, get_name_from_path
 if __name__ == "__main__":
     guesser = TitleGuesser()
     guesser.load_set("KTK")
+    guesser.load_set("FRF")
 
     cards = glob("./sample_imgs/*.jpg")
 
