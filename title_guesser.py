@@ -1,33 +1,6 @@
-from glob import glob
 from PIL import Image
 
-import cv2
-import numpy as np
-import imagehash
-
-from vision import _gray
-
-size = (128, 128)
-
-
-def process_img(pilimg):
-    pilimg = pilimg.resize(size, Image.ANTIALIAS)
-    img = np.array(pilimg)
-
-    img = _gray(img)
-    img = cv2.medianBlur(img, 3)
-    img = cv2.equalizeHist(img)
-
-    return Image.fromarray(img)
-
-
-def get_hash(img):
-    img = process_img(img)
-    w, h = img.size
-    cropped = img.crop((10, 10, w - 10, h - 10 - h / 4))
-    return str(imagehash.dhash(cropped)) + \
-        str(imagehash.phash(cropped)) + \
-        str(imagehash.average_hash(cropped))
+from hasher import get_hash
 
 
 # http://code.activestate.com/recipes/499304-hamming-distance/
@@ -49,30 +22,28 @@ def get_name_from_path(path):
     return path.split("/")[-1].split(".")[0].lower()
 
 
-def get_closest_hash(card_hash):
-    def match(scans):
-        return sorted(
-            scans,
-            key=lambda (s_hash, _n): hamdist(card_hash, s_hash)
-        )[0]
-    return match
+def prep_hash_cache(file_contents):
+    return map(
+        lambda line: tuple(line.split("|")),
+        file_contents.split("\n")
+    )
 
 
 class TitleGuesser:
-    def __init__(self):
-        self._sets = []
+    def __init__(self, hash_cache_path):
+        file = open(hash_cache_path)
+        # Don't include the last line, it's blank and blows things up.
+        self._cache = prep_hash_cache(file.read())[:-1]
+        file.close()
 
-    # Ideally we'll be loading all the sets, because of the hash cache.
-    def load_set(self, set):
-        files = glob("/Users/mike/magic/data/images/" + set + "/*.jpg")
-        self._sets.append(map(get_hash_path_pair_from_image_path, files))
-
-    # Assume we're receiving a cropped card (cv) image.
+    # We're receiving a cropped card image (cv2, not PIL).
     def guess(self, img):
         card = Image.fromarray(img)
         card_hash = get_hash(card)
 
-        matches = map(get_closest_hash(card_hash), self._sets)
-        best_match = get_closest_hash(card_hash)(matches)
+        best_match = sorted(
+            self._cache,
+            key=lambda (s_hash, _n, _s): hamdist(card_hash, s_hash)
+        )[0]
 
-        return get_name_from_path(best_match[1])
+        return best_match

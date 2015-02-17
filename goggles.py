@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import os
 import sys
 from uuid import uuid1 as uuid
 
@@ -23,6 +24,7 @@ def _begin_webcam_loop():
     cv2.namedWindow("goggles")
 
     guess = ""
+    frame_guess = ""
 
     vc = cv2.VideoCapture(0)
     if vc.isOpened():  # Try to get the first frame.
@@ -44,7 +46,7 @@ def _begin_webcam_loop():
         try:
             card = _get_cropped_card(display_img)
 
-            frame_guess = guesser.guess(card)
+            frame_guess = guesser.guess(card)[1]
 
             cv2.putText(
                 display_img,
@@ -65,6 +67,8 @@ def _begin_webcam_loop():
 
             cv2.imshow("goggles", display_img)
 
+        except KeyboardInterrupt:
+            sys.exit()
         except:
             cv2.putText(
                 display_img,
@@ -75,20 +79,21 @@ def _begin_webcam_loop():
                 colors["blue"]
             )
             cv2.imshow("goggles", display_img)
+
         if key == 27:  # Exit on escape.
             break
         elif key == 112:  # Save frame on p.
             cv2.imwrite(str(uuid()) + ".jpg", frame)
         elif key == 32:  # Print guess on space.
+            print("WROTE:", guess, file=sys.stderr)
             print(guess)
             guess = ""
         elif key == 99:  # Clear guess on c.
             guess = ""
         elif key == 103:  # Guess on g.
-            print("Locking in guess...", file=sys.stderr)
             try:
-                guess = guesser.guess(card)
-                print(guess, file=sys.stderr)
+                guess = frame_guess
+                print("Locked:", guess, file=sys.stderr)
             except:
                 pass
 
@@ -96,21 +101,7 @@ def _begin_webcam_loop():
 
 
 if __name__ == "__main__":
-    sets = [
-        "DGM",
-        "BNG",
-        "JOU",
-        "THS",
-        "RTR",
-        "GTC",
-        "KTK",
-        "FRF",
-        "M14",
-        "M15"
-    ]
-    guesser = TitleGuesser()
-
-    for set in sets:
-        guesser.load_set(set)
+    # guesser = TitleGuesser(os.environ["CARD_HASH_CACHE"])
+    guesser = TitleGuesser("./hash_cache.txt")
 
     _begin_webcam_loop()

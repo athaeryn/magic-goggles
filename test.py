@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import os
 from glob import glob
 
 from PIL import Image
@@ -10,9 +11,7 @@ from title_guesser import TitleGuesser, get_name_from_path
 
 
 if __name__ == "__main__":
-    guesser = TitleGuesser()
-    guesser.load_set("KTK")
-    guesser.load_set("FRF")
+    guesser = TitleGuesser("./hash_cache.txt")
 
     cards = glob("./sample_imgs/*.jpg")
 
@@ -22,7 +21,7 @@ if __name__ == "__main__":
         img = Image.open(path)
         card = _get_cropped_card(np.array(img))
 
-        best_guess = guesser.guess(card)
+        best_guess = guesser.guess(card)[1]
 
         if card_name == best_guess:
             print(" ", card_name)
