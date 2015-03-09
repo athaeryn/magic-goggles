@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import os
 from glob import glob
 
 from PIL import Image
@@ -11,7 +10,7 @@ from title_guesser import TitleGuesser, get_name_from_path
 
 
 if __name__ == "__main__":
-    guesser = TitleGuesser("./hash_cache.txt")
+    guesser = TitleGuesser()
 
     cards = glob("./sample_imgs/*.jpg")
 

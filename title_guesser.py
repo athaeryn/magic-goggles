@@ -1,16 +1,12 @@
+from __future__ import print_function
+
+import os
+import sys
+
 from PIL import Image
 
+from hamdist import hamdist
 from hasher import get_hash
-
-
-# http://code.activestate.com/recipes/499304-hamming-distance/
-def hamdist(str1, str2):
-    """Count the # of differences between equal length strings str1 and str2"""
-    diffs = 0
-    for ch1, ch2 in zip(str1, str2):
-        if ch1 != ch2:
-            diffs += 1
-    return diffs
 
 
 def get_hash_path_pair_from_image_path(path):
@@ -30,15 +26,21 @@ def prep_hash_cache(file_contents):
 
 
 class TitleGuesser:
-    def __init__(self, hash_cache_path):
-        file = open(hash_cache_path)
+    def __init__(self):
+        try:
+            file = open(os.environ["CARD_HASH_CACHE"])
+        except:
+            print("CARD_HASH_CACHE not set!", file=sys.stderr)
+            exit(1)
         # Don't include the last line, it's blank and blows things up.
         self._cache = prep_hash_cache(file.read())[:-1]
         file.close()
 
     # We're receiving a cropped card image (cv2, not PIL).
     def guess(self, img):
+        # Convert cv2 image to PIL
         card = Image.fromarray(img)
+
         card_hash = get_hash(card)
 
         best_match = sorted(

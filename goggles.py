@@ -2,9 +2,8 @@
 
 from __future__ import print_function
 
-import os
-import sys
 from uuid import uuid1 as uuid
+import sys
 
 import cv2
 
@@ -20,7 +19,7 @@ colors = {
 }
 
 
-def _begin_webcam_loop():
+def begin_webcam_loop():
     cv2.namedWindow("goggles")
 
     guess = ""
@@ -101,7 +100,6 @@ def _begin_webcam_loop():
 
 
 if __name__ == "__main__":
-    # guesser = TitleGuesser(os.environ["CARD_HASH_CACHE"])
-    guesser = TitleGuesser("./hash_cache.txt")
+    guesser = TitleGuesser()
 
-    _begin_webcam_loop()
+    begin_webcam_loop()
