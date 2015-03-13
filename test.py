@@ -20,7 +20,12 @@ if __name__ == "__main__":
         img = Image.open(path)
         card = _get_cropped_card(np.array(img))
 
-        best_guess = guesser.guess(card)[1]
+        guesses = guesser.guess(card)
+
+        if len(guesses) < 1:
+            best_guess = "None"
+        else:
+            best_guess = guesses[0]["meta"]["name"]
 
         if card_name == best_guess:
             print(" ", card_name)

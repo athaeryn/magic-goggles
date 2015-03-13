@@ -17,7 +17,7 @@ class BKTree:
         dist = self._dist(node["string"], string)
         matches = []
         if dist <= tolerance:
-            matches.append(node["string"])
+            matches.append(node)
         for k in node["children"]:
             if k >= tolerance - 1 and k <= tolerance + 1:
                 matches += self._query_node(

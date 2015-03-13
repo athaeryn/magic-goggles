@@ -5,6 +5,7 @@ import sys
 
 from PIL import Image
 
+from bktree import BKTree
 from hamdist import hamdist
 from hasher import get_hash
 
@@ -32,8 +33,11 @@ class TitleGuesser:
         except:
             print("CARD_HASH_CACHE not set!", file=sys.stderr)
             exit(1)
+        self._tree = BKTree(hamdist)
         # Don't include the last line, it's blank and blows things up.
-        self._cache = prep_hash_cache(file.read())[:-1]
+        hashes = prep_hash_cache(file.read())[:-1]
+        for h in hashes:
+            self._tree.insert(h[0], meta={"name": h[1], "set": h[2]})
         file.close()
 
     # We're receiving a cropped card image (cv2, not PIL).
@@ -43,9 +47,6 @@ class TitleGuesser:
 
         card_hash = get_hash(card)
 
-        best_match = sorted(
-            self._cache,
-            key=lambda (s_hash, _n, _s): hamdist(card_hash, s_hash)
-        )[0]
+        best_match = self._tree.query(card_hash, tolerance=2)
 
         return best_match
