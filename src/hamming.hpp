@@ -3,6 +3,8 @@
 
 #include <string>
 
-int hamming_distance(std::string a, std::string b);
+using namespace std;
+
+int hamming_distance(string a, string b);
 
 #endif // __HAMMING_INCLUDE__
